@@ -1,0 +1,31 @@
+name: FakePlayer
+version: '${project.version}'
+main: net.tntchina.fakeplayer.FakePlayer
+permissions:
+  fakePlayer.*:
+    description: Manage the fakePlayer(s) commands.
+    children:
+      fakePlayer.add: true
+      fakePlayer.remove: true
+      fakePlayer.list: true
+      fakePlayer.execute: true
+  fakePlayer.add:
+    description: Add a fakePlayer/fakePlayers.
+    default: op
+  fakePlayer.remove:
+    description: Remove the specific fakePlayer.
+    default: op
+  fakePlayer.list:
+    description: List the fakePlayer(s).
+    default: op
+  fakePlayer.execute:
+    description: Execute the command(s).
+    default: op
+commands:
+  fakePlayer:
+    aliases: fp
+    description: Manage the fakePlayer(s).
+    usage: "[FakePlayer] The correct usage:\n/<command> add <name> --Add a fakePlayer with specific name.\n/<command> remove <name> --Delete a fakePlayer with the specific name.\n/<command> remove all --Remove all fakePlayers from the server.\n/<command> list --List all fakePlayers in the server."
+    permission: fakePlayer.execute
+    permission-message: You don't have <permission>!
+api-version: '1.20'
