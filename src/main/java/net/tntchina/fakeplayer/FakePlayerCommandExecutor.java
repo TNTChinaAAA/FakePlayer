@@ -1,54 +1,118 @@
 package net.tntchina.fakeplayer;
 
 import com.mojang.authlib.GameProfile;
+import io.netty.channel.Channel;
+import io.netty.channel.socket.InternetProtocolFamily;
+import io.netty.channel.socket.nio.NioServerSocketChannel;
 import net.minecraft.network.Connection;
 import net.minecraft.network.protocol.PacketFlow;
+import net.minecraft.network.protocol.status.ServerStatus;
 import net.minecraft.server.MinecraftServer;
+import net.minecraft.server.dedicated.DedicatedPlayerList;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
-import net.minecraft.server.network.ServerGamePacketListenerImpl;
+import net.minecraft.server.players.GameProfileCache;
+import net.minecraft.server.players.PlayerList;
 import net.minecraft.world.entity.Entity;
-import net.minecraft.world.level.GameType;
 import org.bukkit.*;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
+import org.bukkit.craftbukkit.v1_20_R1.CraftServer;
 import org.bukkit.craftbukkit.v1_20_R1.CraftWorld;
+import org.bukkit.craftbukkit.v1_20_R1.entity.CraftPlayer;
 import org.bukkit.entity.Player;
 import org.bukkit.event.entity.CreatureSpawnEvent;
 
+import java.lang.reflect.Field;
+import java.lang.reflect.ParameterizedType;
+import java.lang.reflect.Type;
+import java.nio.channels.spi.SelectorProvider;
 import java.util.*;
 import java.util.logging.Logger;
 
 public class FakePlayerCommandExecutor implements CommandExecutor {
 
-    FakePlayer fakePlayer;
+    public Logger logger;
+    public FakePlayer fakePlayer;
+    public MinecraftServer server;
+    public boolean hasPlayersByNameMap = false;
+    public boolean hasPlayersByUUIDMap = false;
+    public Map<String, ServerPlayer> playersByName = new HashMap<>();
+    public Map<UUID, ServerPlayer> playersByUUID = new HashMap<>();
+    public List<ServerPlayer> players;
+    public DedicatedPlayerList dedicatedPlayerList;
 
     public FakePlayerCommandExecutor(FakePlayer fakePlayer){
         this.fakePlayer = fakePlayer;
+        this.server = MinecraftServer.getServer();
+        this.logger = this.getLogger();
+        this.dedicatedPlayerList = ((CraftServer) Bukkit.getServer()).getServer().getPlayerList();
+        this.players = dedicatedPlayerList.players;
+
+        for (Field field : PlayerList.class.getDeclaredFields()) {
+            if (field.getType().equals(Map.class)) {
+                Type t = field.getGenericType();
+
+                if (t instanceof ParameterizedType) {
+                    ParameterizedType type = (ParameterizedType) t;
+                    Type[] types = type.getActualTypeArguments();
+
+                    if (types.length == 2) {
+                        boolean A = types[0].getTypeName().equals(String.class.getTypeName());
+                        boolean B = types[1].getTypeName().equals(ServerPlayer.class.getTypeName());
+                        boolean C = types[0].getTypeName().equals(UUID.class.getTypeName());
+                        boolean D = A && B;
+                        boolean E = C && B;
+
+                        if (D) {
+                            try {
+                                field.setAccessible(true);
+                                this.playersByName = (Map<String, ServerPlayer>) field.get(dedicatedPlayerList);
+                                this.hasPlayersByNameMap = true;
+                            } catch (IllegalAccessException e) {
+                                this.hasPlayersByNameMap = false;
+                            }
+                        }
+
+                        if (E) {
+                            try {
+                                field.setAccessible(true);
+                                this.playersByUUID = (Map<UUID, ServerPlayer>) field.get(dedicatedPlayerList);
+                                this.hasPlayersByUUIDMap = true;
+                            } catch (IllegalAccessException e) {
+                                this.hasPlayersByUUIDMap = false;
+                            }
+                        }
+                    }
+                }
+            }
+        }
     }
-    public boolean onCommand(CommandSender sender, Command command, String label, String[] args){
-        Logger logger = this.getLogger();
-        MinecraftServer server = MinecraftServer.getServer();
+
+    public boolean onCommand(CommandSender sender, Command command, String alias, String[] args){
+        this.server = MinecraftServer.getServer();
+        //Bukkit.savePlayers();
 
         if (args.length >= 1) {
             if (args[0].equals("add")) {
                 //TODO: execute the command "add".
 
                 if (!(sender instanceof Player)) {
-                    logger.info(ChatColor.RED + "The command can only be used by player, not for the terminal operator.");
+                    //logger.info(sender.getName()); result: CONSOLE
+                    this.sendMessage("The command can only be used by player, not for the terminal operator.", ChatColor.RED, sender);
                     return true;
                 }
 
-                Player player = (Player) sender;
+                CraftPlayer player = (CraftPlayer) sender;
 
                 if (args.length == 1) {
-                    this.broadcastMessage("The required Argument is missing: name.", ChatColor.RED);
+                    this.sendMessage( "The required Argument is missing: name.", ChatColor.RED, sender);
                     return false;
                 } else {
                     if (args.length == 2) {
                         if (args[1].contains("[") | args[1].contains("]")) {
-                            this.broadcastMessage("The name argument can't contain \"[\" or \"]\"! Please change a name!", ChatColor.RED);
+                            this.sendMessage("The name argument can't contain \"[\" or \"]\"! Please change a name!", ChatColor.RED, sender);
                             return true;
                         }
 
@@ -56,58 +120,91 @@ public class FakePlayerCommandExecutor implements CommandExecutor {
                         Player player1 = Bukkit.getServer().getPlayer(args[1]);
 
                         if (player1 != null) {
-                            boolean isFakePlayer = player1.getName().contains(Utils.getPrefix());
+                            boolean isFakePlayer = ((CraftPlayer) player1).getHandle() instanceof MyFakePlayer;
 
                             if (isFakePlayer) {
-                                this.broadcastMessage("This fakePlayer is already in the server!Please change a name.", ChatColor.RED);
+                                this.sendMessage("This fakePlayer is already in the server! Please change a name.", ChatColor.RED, sender);
                             } else {
-                                this.broadcastMessage("This real player is already in the server!Please change a name.", ChatColor.RED);
+                                this.sendMessage("This real player is already in the server! Please change a name.", ChatColor.RED, sender);
                             }
 
                             return true;
                         } else {
-                            List<ServerPlayer> fakePlayersList = Utils.getFakePlayersList();
+                            List<MyFakePlayer> fakePlayersList = Utils.getFakePlayersList();
 
-                            for (ServerPlayer fkPlayer__ : fakePlayersList) {
-                                if (Utils.getFakePlayerName(fkPlayer__.displayName).equals(args[1])) {
-                                    this.broadcastMessage("This fakePlayer is already in the server! Please change a name.", ChatColor.RED);
+                            for (MyFakePlayer fkPlayer__ : fakePlayersList) {
+                                if (fkPlayer__.getNameContent().equals(args[1])) {
+                                    this.sendMessage("This fakePlayer is already in the server! Please change a name.", ChatColor.RED, sender);
                                     return true;
                                 }
                             }
 
                             CraftWorld world = (CraftWorld) player.getWorld();
                             ServerLevel nmsWorld = world.getHandle();
-                            GameProfile profile = new GameProfile(UUID.randomUUID(), Utils.generateName(args[1]));
-                            ServerPlayer npc = new MyFakePlayer(server, nmsWorld, profile);
-                            ServerPlayer realPlayer = Utils.getServerPlayerByName(player.getName(), nmsWorld);
+                            MyFakePlayer npc = new MyFakePlayer(this.server, nmsWorld, args[1]);
+                            npc.setLevel(nmsWorld);
+                            ServerPlayer realPlayer = player.getHandle();
+                            //logger.info(realPlayer.connection.connection.channel.getClass().getName());
+                            //result: NioServerSocketChannel or NettyChannelProxy(ProtocolLib Plugin Handler)
+                            //Channel channel = new NioServerSocketChannel(SelectorProvider.provider(), InternetProtocolFamily.IPv4);
+                            //npc.connection.connection.channel = channel;
+
                             /*
                             ServerGamePacketListenerImpl playerConnection = realPlayer.connection;
                             Connection connection = playerConnection.connection;
                             */
-                            npc.connection = new ServerGamePacketListenerImpl(MinecraftServer.getServer(), new Connection(PacketFlow.SERVERBOUND), npc);
-                            npc.displayName = Utils.generateName(args[1]);
-                            npc.setXRot(realPlayer.getXRot());
-                            npc.setYRot(realPlayer.getYRot()); //TODO: 让npc视角和玩家一模一样
-                            Location location = player.getLocation();
-                            npc.setPos(location.getX(), location.getY(), location.getZ());
-                            npc.visibleByDefault = true;
-                            npc.setGameMode(GameType.CREATIVE);
-                            //nmsWorld.addNewPlayer(npc);
+                            //logger.info(realPlayer.connection.connection.getReceiving().name()); //result: SERVERBOUND
+                            //npc.connection = new ServerGamePacketListenerImpl(MinecraftServer.getServer(), new Connection(PacketFlow.SERVERBOUND), npc);
+                            npc.locale = realPlayer.locale;
+                            npc.setHealth(20);
+                            npc.setRotation(realPlayer);
+                            npc.setLocation(player);
+                            npc.setYBodyRot(realPlayer.yBodyRot);
+                            npc.setYHeadRot(realPlayer.yHeadRot);
+                            /*CraftPlayer craftPlayer = new CraftPlayer(server.server, npc);
+                              server.getPlayerList.list.add(npc);
+                            */
                             world.addEntityToWorld(npc, CreatureSpawnEvent.SpawnReason.CUSTOM);
-                            Player npc_1 = Bukkit.getPlayer(args[1]);
+                            npc.spawnIn(nmsWorld);
+                            this.addPlayerToServerList(npc);
+                            //nmsWorld.addNewPlayer(npc);
+                            this.updateScoreboard(nmsWorld, npc);
+                            this.dedicatedPlayerList.onPlayerJoinFinish(npc, world.getHandle(), "local");
 
-                            if (npc_1 != null) {
-                                npc_1.setDisplayName(Utils.generateName(args[1]));
-                                npc_1.setPlayerListName(Utils.generateName(args[1]));
+                            ServerStatus serverping = this.server.getStatus();
+
+                            if (serverping != null) {
+                                npc.sendServerStatus(serverping);
                             }
 
-                            this.broadcastMessage("Successfully added fakePlayer " + ChatColor.AQUA + args[1] + ChatColor.GREEN + ".", ChatColor.GREEN);
+                            CraftPlayer npc_1 = npc.getBukkitEntity();
+
+                            if (npc_1 != null) {
+                                npc_1.setHealth(20);
+                                npc_1.setDisplayName(Utils.generateName(args[1]));
+                                npc_1.setPlayerListName(Utils.generateName(args[1]));
+                                npc.displayName = Utils.generateName(args[1]);
+                                npc_1.setCustomName(Utils.generateName(args[1]));
+                                npc_1.setCustomNameVisible(true);
+                                //npc_1.setPlayerListName(args[1]);
+                            }
+
+                            npc.isRealPlayer = false;
+                            //server.getPlayerList().placeNewPlayer(npc.connection.connection, npc);
+                            //npc.sendJoinPacket(); //TODO: send joining game packet.
+
+                            for (ServerPlayer player__ : server.getPlayerList().getPlayers()) {
+                                if (player__.isRealPlayer && !(player__ instanceof MyFakePlayer)) {
+                                    //server.getPlayerList().placeNewPlayer(player__.connection.connection, npc);
+                                    Utils.doSending(player__.connection, npc);
+                                }
+                            }
+
+                            //nmsWorld.players().add(npc);
+                            this.sendMessage("Successfully added fakePlayer " + ChatColor.AQUA + args[1] + ChatColor.GREEN + ".", ChatColor.GREEN, sender);
                         }
 
                         return true;
-                    } else {
-                        this.broadcastWrongMessage();
-                        return false;
                     }
                 }
             }
@@ -116,56 +213,94 @@ public class FakePlayerCommandExecutor implements CommandExecutor {
                 //TODO: execute the command "remove".
 
                 if (args.length == 1) {
-                    this.broadcastMessage("The required Argument is missing: name.", ChatColor.RED);
+                    this.sendMessage("The required Argument is missing: name.", ChatColor.RED, sender);
                     return false;
                 } else if (args.length == 2) {
                     if (args[1].contains("[") | args[1].contains("]")) {
-                        this.broadcastMessage("The name argument can't contain \"[\" or \"]\"! Please change a name!", ChatColor.RED);
+                        this.sendMessage("The name argument can't contain \"[\" or \"]\"! Please change a name!", ChatColor.RED, sender);
                         return true;
                     }
 
-                    Map<ServerPlayer, CraftWorld> playerMaps = Utils.getFakePlayerMaps();
                     //TODO: remove all fakePlayers.
                     if (args[1].equals("all")) {
-                        this.removeAllFakePlayer();
-                        this.broadcastMessage("Successfully remove all fakePlayers.", ChatColor.GREEN);
+                        List<UUID> lll = this.removeAllFakePlayer();
+
+                        for (ServerPlayer player__ : server.getPlayerList().getPlayers()) {
+                            if (player__.isRealPlayer && !(player__ instanceof MyFakePlayer)) {
+                                Utils.doRemoving(player__.connection, lll);
+                            }
+                        }
+
+                        this.sendMessage("Successfully remove all fakePlayers.", ChatColor.GREEN, sender);
                         return true;
                     }
 
                     //TODO: delete the specific fakePlayer from the serverSidedWorld.
-                    Map<ServerPlayer, CraftWorld> fkPlayerMaps = Utils.getFakePlayerMaps();
-                    List<ServerPlayer> fkPlayersList = new ArrayList<>(fkPlayerMaps.keySet());
+                    Map<MyFakePlayer, CraftWorld> fkPlayerMaps = Utils.getFakePlayerMaps();
+                    List<MyFakePlayer> fkPlayersList = new ArrayList<>(fkPlayerMaps.keySet());
                     boolean isFakeExisting = false;
+                    UUID uuid__ = UUID.randomUUID();
 
-                    for (ServerPlayer pla_ : fkPlayersList) {
-                        if (Utils.getFakePlayerName(pla_.displayName).equals(args[1])) {
+                    for (MyFakePlayer pla_ : fkPlayersList) {
+                        if (pla_.getNameContent().equals(args[1])) {
                             pla_.setHealth(0);
                             pla_.kill();
                             ServerLevel nmsWorld = fkPlayerMaps.get(pla_).getHandle();
                             nmsWorld.removePlayerImmediately(pla_, Entity.RemovalReason.KILLED);
+                            nmsWorld.getChunkSource().removeEntity(pla_);
                             isFakeExisting = true;
+                            uuid__ = pla_.getUUID();
+                            this.removePlayerFromServerList(pla_);
+
+
+                            for (ServerPlayer player__ : server.getPlayerList().getPlayers()) {
+                                if (player__.isRealPlayer && !(player__ instanceof MyFakePlayer)) {
+                                    Utils.doRemoving(player__.connection, pla_);
+                                }
+                            }
+
                             break;
                         }
                     }
 
-                    Player player1 = Bukkit.getServer().getPlayer(Utils.generateName(args[1]));
 
-                    if (player1 != null) {
-                        if (player1.getPlayerListName().contains(Utils.getPrefix())) {
+                    if (isFakeExisting) {
+                        Player player1 = Bukkit.getServer().getPlayer(uuid__);
+
+                        if (player1 != null) {
+
+                        /*
                             if (player1 instanceof ServerPlayer) {
+
                                 ServerPlayer player4 = ((ServerPlayer) player1);
                                 player4.setHealth(0);
                                 player4.kill();
-                                ((CraftWorld) player1.getWorld()).getHandle().removePlayerImmediately(player4, Entity.RemovalReason.KILLED);
+                                CraftWorld wddd =  ((CraftWorld) player1.getWorld());
+                                wddd.getHandle().removePlayerImmediately(player4, Entity.RemovalReason.KILLED);
+                                wddd.getHandle().getChunkSource().removeEntity(player4);
                             }
+                        */
 
-                            player1.setHealth(0);
-                            player1.kick();
+                            CraftPlayer player = (CraftPlayer) player1;
+                            CraftWorld worlddd = (CraftWorld) player.getWorld();
+                            ServerLevel level__ = worlddd.getHandle();
+
+                            if (player.getHandle() != null) {
+                                if (player.getHandle() instanceof MyFakePlayer) {
+                                    MyFakePlayer fkkk = (MyFakePlayer) player.getHandle();
+                                    player1.setHealth(0);
+                                    fkkk.kill();
+                                    player1.kick();
+                                    level__.removePlayerImmediately(fkkk, Entity.RemovalReason.KILLED);
+                                    level__.getChunkSource().removeEntity(fkkk);
+                                }
+                            }
                         }
                     }
 
+
                     if (!isFakeExisting) {
-                        this.broadcastMessage("Error! The fakePlayer called " + args[1] + " is not existing!", ChatColor.RED);
+                        this.sendMessage("Error! The fakePlayer called " + args[1] + " is not existing!", ChatColor.RED, sender);
                     } else {
                         /*if (player1 != null) {
                             if (player1.getPlayerListName().contains(Utils.getPrefix())) {
@@ -184,13 +319,10 @@ public class FakePlayerCommandExecutor implements CommandExecutor {
                             }
                         }*/
 
-                        this.broadcastMessage("Successfully remove fakePlayer " + ChatColor.AQUA + args[1] + ChatColor.GREEN + ".", ChatColor.GREEN);
+                        this.sendMessage("Successfully remove fakePlayer " + ChatColor.AQUA + args[1] + ChatColor.GREEN + ".", ChatColor.GREEN, sender);
                     }
 
                     return true;
-                } else {
-                    this.broadcastWrongMessage();
-                    return false;
                 }
             }
 
@@ -199,46 +331,104 @@ public class FakePlayerCommandExecutor implements CommandExecutor {
 
                 if (args.length == 1) {
                     //TODO: List the fakePlayer(s).
-                    this.listAllPlayer(Utils.getFakePlayerMaps());
+                    this.listAllPlayer(Utils.getFakePlayerMaps(), sender);
                     return true;
-                } else {
-                    this.broadcastWrongMessage();
-                    return false;
                 }
             }
-        } else {
-            this.broadcastWrongMessage();
-            return false;
         }
 
+        this.sendWrongMessage(sender);
         return false;
     }
 
-    public void listAllPlayer(Map<ServerPlayer, CraftWorld> playerMaps) {
-        List<ServerPlayer> list = new ArrayList<>(playerMaps.keySet());
+    public void updateScoreboard(ServerLevel nmsWorld, MyFakePlayer npc) {
+        this.dedicatedPlayerList.updateEntireScoreboard(nmsWorld.getScoreboard(), npc);
+    }
+
+    public void addPlayerToServerList(MyFakePlayer fakePlayer) {
+        GameProfile gameprofile = fakePlayer.getGameProfile();
+        GameProfileCache usercache = this.server.getProfileCache();
+        //String s;
+        if (usercache != null) {
+            //Optional<GameProfile> optional = usercache.get(gameprofile.getId());
+            //s = (String)optional.map(GameProfile::getName).orElse(gameprofile.getName());
+            usercache.add(gameprofile);
+        }
+
+        /*
+        else {
+
+            //s = gameprofile.getName();
+        }*/
+
+        /*
+        if (this.hasPlayersByNameMap) {
+            this.playersByName.put(fakePlayer.getNameContent(), fakePlayer);
+        }*/
+
+        /*
+        if (this.hasPlayersByUUIDMap) {
+            this.playersByUUID.put(fakePlayer.getUUID(), fakePlayer);
+        }*/
+
+        this.players.add(fakePlayer);
+    }
+
+    public void removePlayerFromServerList(MyFakePlayer fakePlayer) {
+        /*
+        if (this.hasPlayersByNameMap) {
+            this.playersByName.remove(fakePlayer.getNameContent(), fakePlayer);
+        }*/
+
+        /*
+        if (this.hasPlayersByUUIDMap) {
+            this.playersByUUID.remove(fakePlayer.getUUID(), fakePlayer);
+        }*/
+
+        this.players.remove(fakePlayer);
+    }
+
+    /*
+    public void listNames() {
+        if (this.hasPlayersByUUIDMap) {
+            for (Map.Entry<UUID, ServerPlayer> entry : playersByUUID.entrySet()) {
+                Utils.info("Player:{listName: " +entry.getValue().listName + "}, {name: " + entry.getValue().getName().toString() + "}, {UUID: " + entry.getValue().getStringUUID() + "}");
+            }
+        }
+
+        if (this.hasPlayersByNameMap) {
+            for (Map.Entry<String, ServerPlayer> entry : playersByName.entrySet()) {
+                Utils.info("Player:{listName: " +entry.getValue().listName + "}, {name: " + entry.getKey() + "}, {UUID: " + entry.getValue().getStringUUID() + "}");
+            }
+        }
+    }
+     */
+
+    public void listAllPlayer(Map<MyFakePlayer, CraftWorld> playerMaps, CommandSender sender) {
+        List<MyFakePlayer> list = new ArrayList<>(playerMaps.keySet());
 
         if (list.size() == 0) {
-            this.broadcastMessage("There are no fakePlayers.", ChatColor.GREEN);
+            this.sendMessage("There are no fakePlayers.", ChatColor.GREEN, sender);
         }
 
         if (list.size() == 1) {
-            ServerPlayer fakePlayer_1 = list.get(0);
-            String name = Utils.getFakePlayerName(fakePlayer_1.displayName);
+            MyFakePlayer fakePlayer_1 = list.get(0);
+            String name = fakePlayer_1.getNameContent();
             int x = (int) fakePlayer_1.getX();
             int y = (int) fakePlayer_1.getY();
             int z = (int) fakePlayer_1.getZ();
             String position = "[X=" + x + ", " + "Y=" + y + ", " + "Z=" + z + "]";
             CraftWorld cw = playerMaps.get(fakePlayer_1);
             String wd_str = "[World: " + cw.getName() + "]";
-            this.broadcastMessage(ChatColor.GREEN + "There is a fakePlayer: " + ChatColor.AQUA + name + ChatColor.GREEN + position + wd_str + ".");
+            this.sendMessage(ChatColor.GREEN + "There is a fakePlayer: " + ChatColor.AQUA + name + ChatColor.GREEN + position + wd_str + ".", sender);
         }
 
         if (list.size() >= 2) {
             String ms_12 = "There are " + list.size() + " fakePlayers, they are: ";
 
             for (int i = 0; i < list.size(); i++) {
-                ServerPlayer player__1 = list.get(i);
-                String name_4 = Utils.getFakePlayerName(player__1.displayName);
+                MyFakePlayer player__1 = list.get(i);
+                String name_4 = player__1.getNameContent();
                 ms_12 += ChatColor.AQUA + name_4 + ChatColor.GREEN;
                 int x = (int) player__1.getX();
                 int y = (int) player__1.getY();
@@ -251,20 +441,42 @@ public class FakePlayerCommandExecutor implements CommandExecutor {
                 ms_12 += (i == list.size() - 1) ? "." : ", ";
             }
 
-            this.broadcastMessage(ms_12, ChatColor.GREEN);
+            this.sendMessage(ms_12, ChatColor.GREEN, sender);
         }
     }
 
-    public void removeAllFakePlayer() {
-        for(Map.Entry<ServerPlayer, CraftWorld> entry : Utils.getFakePlayerMaps().entrySet()) {
-            ServerPlayer npc = entry.getKey();
+    public List<UUID> removeAllFakePlayer() {
+        List<UUID> removeList = new ArrayList<>();
+
+        for(Map.Entry<MyFakePlayer, CraftWorld> entry : Utils.getFakePlayerMaps().entrySet()) {
+            MyFakePlayer npc = entry.getKey();
             ServerLevel nmsWorld = entry.getValue().getHandle();
+            removeList.add(npc.getUUID());
             npc.setHealth(0);
             npc.kill();
+
+            Player player1 = Bukkit.getServer().getPlayer(npc.getUUID()); //important
+
+            if (player1 != null) {
+                CraftPlayer player = (CraftPlayer) player1;
+
+                if (player.getHandle() != null) {
+                    if (player.getHandle() instanceof MyFakePlayer) {
+                        player1.setHealth(0);
+                        player1.kick();
+                    }
+                }
+            }
+
             nmsWorld.removePlayerImmediately(npc, Entity.RemovalReason.KILLED);
+            nmsWorld.getChunkSource().removeEntity(npc);
+            this.removePlayerFromServerList(npc);
         }
+
+        return removeList;
     }
 
+    /*
     public void broadcastWrongMessage() {
         Bukkit.broadcastMessage(ChatColor.AQUA + "[FakePlayer] " + ChatColor.RED + "Wrong usage! Please according to the usage guide.");
     }
@@ -275,6 +487,18 @@ public class FakePlayerCommandExecutor implements CommandExecutor {
 
     public void broadcastMessage(String message, ChatColor chatColor) {
         Bukkit.broadcastMessage(ChatColor.AQUA + "[FakePlayer] " + chatColor + message);
+    }*/
+
+    public void sendMessage(String message, CommandSender sender) {
+        sender.sendMessage(ChatColor.AQUA + "[FakePlayer] " + message);
+    }
+
+    public void sendMessage(String message, ChatColor chatColor, CommandSender sender) {
+        sender.sendMessage(ChatColor.AQUA + "[FakePlayer] " + chatColor + message);
+    }
+
+    public void sendWrongMessage(CommandSender sender) {
+        this.sendMessage("Wrong usage! Please according to the usage guide.", ChatColor.RED, sender);
     }
 
     public Logger getLogger() {
