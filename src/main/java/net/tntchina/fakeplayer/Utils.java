@@ -1,7 +1,7 @@
 package net.tntchina.fakeplayer;
 
+import net.kyori.adventure.text.Component;
 import net.minecraft.network.Connection;
-import net.minecraft.network.chat.Component;
 import net.minecraft.network.protocol.PacketFlow;
 import net.minecraft.network.protocol.game.ClientboundAddPlayerPacket;
 import net.minecraft.network.protocol.game.ClientboundPlayerInfoRemovePacket;
@@ -15,6 +15,7 @@ import net.minecraft.world.entity.Entity;
 import org.bukkit.*;
 import org.bukkit.craftbukkit.v1_20_R1.CraftWorld;
 import org.bukkit.craftbukkit.v1_20_R1.entity.CraftPlayer;
+import org.bukkit.craftbukkit.v1_20_R1.util.CraftChatMessage;
 import org.bukkit.entity.Player;
 import org.bukkit.event.entity.CreatureSpawnEvent;
 
@@ -210,5 +211,15 @@ public class Utils {
         }
 
         return maps;
+    }
+
+    public static void setFakePlayerColorName(String name, MyFakePlayer npc) {
+        String btName = Utils.generateName(name);
+        npc.adventure$displayName = Component.text(btName); //TODO: update adventure name
+        npc.displayName = btName;
+        npc.listName = CraftChatMessage.fromStringOrNull(btName);
+        npc.setCustomNameVisible(true);
+        npc.setCustomName(CraftChatMessage.fromStringOrNull(btName));
+        //TODO: set color name
     }
 }

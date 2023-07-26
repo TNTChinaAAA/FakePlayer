@@ -6,7 +6,7 @@
 
     <groupId>net.tntchina.fakeplayer</groupId>
     <artifactId>FakePlayer</artifactId>
-    <version>1.0-SNAPSHOT</version>
+    <version>1.0.1-SNAPSHOT</version>
     <packaging>jar</packaging>
 
     <name>FakePlayer</name>
@@ -43,6 +43,7 @@
                     </execution>
                 </executions>
             </plugin>
+
             <!--Paper NMS Maven Plugin -->
             <plugin>
                 <groupId>ca.bkaw</groupId>
@@ -57,6 +58,13 @@
                     </execution>
                 </executions>
             </plugin>
+
+            <!--Sponge Mixin Plugin
+            <plugin>
+                <groupId>org.spongepowered</groupId>
+                <artifactId>mixin</artifactId>
+                <version>0.8.5</version>
+            </plugin>-->
 
         </plugins>
         <resources>
@@ -79,6 +87,7 @@
                 <updatePolicy>always</updatePolicy>
             </snapshots>
         </repository>
+
         <repository>
             <id>sonatype</id>
             <url>https://oss.sonatype.org/content/groups/public/</url>
@@ -90,6 +99,7 @@
                 <updatePolicy>always</updatePolicy>
             </snapshots>
         </repository>
+
         <repository>
             <id>spigot-repo</id>
             <url>https://hub.spigotmc.org/nexus/content/repositories/snapshots/</url>
@@ -101,9 +111,23 @@
                 <updatePolicy>always</updatePolicy>
             </snapshots>
         </repository>
+
         <repository>
             <id>bytecode.space</id>
             <url>https://repo.bytecode.space/repository/maven-public/</url>
+            <releases>
+                <enabled>true</enabled>
+            </releases>
+            <snapshots>
+                <enabled>true</enabled>
+                <updatePolicy>always</updatePolicy>
+            </snapshots>
+        </repository>
+
+        <!--Sponge Repository-->
+        <repository>
+            <id>sponge</id>
+            <url>https://repo.spongepowered.org/repository/maven-public/</url>
             <releases>
                 <enabled>true</enabled>
             </releases>
@@ -126,6 +150,32 @@
                 <updatePolicy>always</updatePolicy>
             </snapshots>
         </pluginRepository>
+
+        <!-- Spigot Repository-->
+        <pluginRepository>
+            <id>spigot-repo</id>
+            <url>https://hub.spigotmc.org/nexus/content/repositories/snapshots/</url>
+            <releases>
+                <enabled>true</enabled>
+            </releases>
+            <snapshots>
+                <enabled>true</enabled>
+                <updatePolicy>always</updatePolicy>
+            </snapshots>
+        </pluginRepository>
+
+        <!-- Sponge Repository-->
+        <pluginRepository>
+            <id>sponge</id>
+            <url>https://repo.spongepowered.org/repository/maven-public/</url>
+            <releases>
+                <enabled>true</enabled>
+            </releases>
+            <snapshots>
+                <enabled>true</enabled>
+                <updatePolicy>always</updatePolicy>
+            </snapshots>
+        </pluginRepository>
     </pluginRepositories>
 
     <dependencies>
@@ -136,6 +186,7 @@
             <version>1.20.1-R0.1-SNAPSHOT</version>
             <scope>provided</scope>
         </dependency>
+
         <!--Mojang NMS -->
         <dependency>
             <groupId>ca.bkaw</groupId>
@@ -143,6 +194,7 @@
             <version>1.20.1-SNAPSHOT</version>
             <scope>provided</scope>
         </dependency>
+
         <!--Mojang authlib -->
         <dependency>
             <groupId>com.mojang</groupId>
@@ -151,7 +203,12 @@
             <scope>provided</scope>
         </dependency>
 
+        <!--Sponge Mixin Dependency
+        <dependency>
+            <groupId>org.spongepowered</groupId>
+            <artifactId>mixin</artifactId>
+            <version>0.8.5</version>
+            <scope>provided</scope>
+        </dependency>-->
     </dependencies>
-
-
 </project>

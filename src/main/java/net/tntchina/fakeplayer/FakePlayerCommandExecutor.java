@@ -4,6 +4,7 @@ import com.mojang.authlib.GameProfile;
 import io.netty.channel.Channel;
 import io.netty.channel.socket.InternetProtocolFamily;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
+import net.kyori.adventure.text.Component;
 import net.minecraft.network.Connection;
 import net.minecraft.network.protocol.PacketFlow;
 import net.minecraft.network.protocol.status.ServerStatus;
@@ -14,6 +15,7 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.server.players.GameProfileCache;
 import net.minecraft.server.players.PlayerList;
 import net.minecraft.world.entity.Entity;
+import net.minecraft.world.scores.PlayerTeam;
 import org.bukkit.*;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
@@ -21,6 +23,7 @@ import org.bukkit.command.CommandSender;
 import org.bukkit.craftbukkit.v1_20_R1.CraftServer;
 import org.bukkit.craftbukkit.v1_20_R1.CraftWorld;
 import org.bukkit.craftbukkit.v1_20_R1.entity.CraftPlayer;
+import org.bukkit.craftbukkit.v1_20_R1.util.CraftChatMessage;
 import org.bukkit.entity.Player;
 import org.bukkit.event.entity.CreatureSpawnEvent;
 
@@ -161,15 +164,14 @@ public class FakePlayerCommandExecutor implements CommandExecutor {
                             npc.setLocation(player);
                             npc.setYBodyRot(realPlayer.yBodyRot);
                             npc.setYHeadRot(realPlayer.yHeadRot);
-                            /*CraftPlayer craftPlayer = new CraftPlayer(server.server, npc);
-                              server.getPlayerList.list.add(npc);
-                            */
+                            npc.isRealPlayer = false;
+                            Utils.setFakePlayerColorName(args[1], npc);//TODO: set color name.
                             world.addEntityToWorld(npc, CreatureSpawnEvent.SpawnReason.CUSTOM);
                             npc.spawnIn(nmsWorld);
-                            this.addPlayerToServerList(npc);
+                            //this.addPlayerToServerList(npc);
                             //nmsWorld.addNewPlayer(npc);
-                            this.updateScoreboard(nmsWorld, npc);
-                            this.dedicatedPlayerList.onPlayerJoinFinish(npc, world.getHandle(), "local");
+                            //this.updateScoreboard(nmsWorld, npc);
+                            //this.dedicatedPlayerList.onPlayerJoinFinish(npc, world.getHandle(), "local");
 
                             ServerStatus serverping = this.server.getStatus();
 
@@ -177,21 +179,14 @@ public class FakePlayerCommandExecutor implements CommandExecutor {
                                 npc.sendServerStatus(serverping);
                             }
 
-                            CraftPlayer npc_1 = npc.getBukkitEntity();
-
-                            if (npc_1 != null) {
-                                npc_1.setHealth(20);
-                                npc_1.setDisplayName(Utils.generateName(args[1]));
-                                npc_1.setPlayerListName(Utils.generateName(args[1]));
-                                npc.displayName = Utils.generateName(args[1]);
-                                npc_1.setCustomName(Utils.generateName(args[1]));
-                                npc_1.setCustomNameVisible(true);
-                                //npc_1.setPlayerListName(args[1]);
-                            }
-
                             npc.isRealPlayer = false;
+                            //boolean A = npc.getTeam() instanceof PlayerTeam; //result: false.
+
                             //server.getPlayerList().placeNewPlayer(npc.connection.connection, npc);
                             //npc.sendJoinPacket(); //TODO: send joining game packet.
+                            for (String s : realPlayer.getTags()) {
+                                logger.info("Tag: " + s);
+                            }
 
                             for (ServerPlayer player__ : server.getPlayerList().getPlayers()) {
                                 if (player__.isRealPlayer && !(player__ instanceof MyFakePlayer)) {

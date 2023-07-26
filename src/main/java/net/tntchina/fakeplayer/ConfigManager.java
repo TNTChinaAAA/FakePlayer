@@ -3,12 +3,14 @@ package net.tntchina.fakeplayer;
 import com.google.gson.*;
 import com.google.gson.stream.JsonWriter;
 import com.mojang.authlib.GameProfile;
+import net.kyori.adventure.text.Component;
 import net.minecraft.network.protocol.status.ServerStatus;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
 import org.bukkit.Bukkit;
 import org.bukkit.craftbukkit.v1_20_R1.CraftWorld;
 import org.bukkit.craftbukkit.v1_20_R1.entity.CraftPlayer;
+import org.bukkit.craftbukkit.v1_20_R1.util.CraftChatMessage;
 import org.bukkit.event.entity.CreatureSpawnEvent;
 
 import java.io.*;
@@ -141,13 +143,14 @@ public class ConfigManager {
                         }
 
                         fk_player.setHealth(20);
+                        fk_player.isRealPlayer = false;
+                        Utils.setFakePlayerColorName(nameContent, fk_player);
                         world.addEntityToWorld(fk_player, CreatureSpawnEvent.SpawnReason.CUSTOM);
                         fk_player.setLevel(world.getHandle());
                         fk_player.spawnIn(world.getHandle());
-                        FakePlayer.commandExecutor.addPlayerToServerList(fk_player);
-                        FakePlayer.commandExecutor.updateScoreboard(world.getHandle(), fk_player);
-                        CraftPlayer npc_1 = fk_player.getBukkitEntity();
-                        FakePlayer.commandExecutor.dedicatedPlayerList.onPlayerJoinFinish(fk_player, world.getHandle(), "local");
+                        //FakePlayer.commandExecutor.addPlayerToServerList(fk_player);
+                        //FakePlayer.commandExecutor.updateScoreboard(world.getHandle(), fk_player);
+                        //FakePlayer.commandExecutor.dedicatedPlayerList.onPlayerJoinFinish(fk_player, world.getHandle(), "local");
                         ServerStatus serverping = MinecraftServer.getServer().getStatus();
 
                         if (serverping != null) {
@@ -155,17 +158,6 @@ public class ConfigManager {
                         }
 
                         fk_player.isRealPlayer = false;
-
-                        if (npc_1 != null) {
-                            npc_1.setHealth(20);
-                            npc_1.setDisplayName(Utils.generateName(nameContent));
-                            fk_player.displayName = Utils.generateName(nameContent);
-                            npc_1.setCustomName(Utils.generateName(nameContent));
-                            //npc_1.setDisplayName(nameContent);
-                            npc_1.setPlayerListName(Utils.generateName(nameContent));
-                            npc_1.setCustomNameVisible(true);
-                            //npc_1.setPlayerListName(nameContent);
-                        }
 
                         for (ServerPlayer player__ : MinecraftServer.getServer().getPlayerList().getPlayers()) {
                             if (player__.isRealPlayer && !(player__ instanceof MyFakePlayer)) {

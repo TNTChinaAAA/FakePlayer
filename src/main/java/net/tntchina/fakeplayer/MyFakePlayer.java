@@ -2,8 +2,10 @@ package net.tntchina.fakeplayer;
 
 import com.mojang.authlib.GameProfile;
 import io.papermc.paper.adventure.AdventureComponent;
+import net.minecraft.ChatFormatting;
 import net.minecraft.core.Rotations;
 import net.minecraft.network.Connection;
+import net.minecraft.network.chat.Component;
 import net.minecraft.network.protocol.Packet;
 import net.minecraft.network.protocol.PacketFlow;
 import net.minecraft.network.protocol.game.ClientboundAddPlayerPacket;
@@ -12,16 +14,18 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.server.network.ServerGamePacketListenerImpl;
 import net.minecraft.world.level.GameType;
-import net.minecraft.world.phys.Vec2;
+import net.minecraft.world.scores.PlayerTeam;
+import net.minecraft.world.scores.Team;
+import org.bukkit.ChatColor;
 import org.bukkit.Location;
+import org.bukkit.craftbukkit.v1_20_R1.util.CraftChatMessage;
 import org.bukkit.entity.Player;
-import org.bukkit.util.Vector;
-
 import java.util.UUID;
 
 public class MyFakePlayer extends ServerPlayer {
 
     public String nameContent = "";
+    public PlayerTeam playerTeam;
 
     public MyFakePlayer(MinecraftServer server, ServerLevel world, GameProfile profile) {
         super(server, world, profile);
@@ -35,6 +39,10 @@ public class MyFakePlayer extends ServerPlayer {
         this.setInvisible(false);
         this.setNoGravity(true);
         this.nameContent = profile.getName();
+        this.playerTeam = this.getScoreboard().addPlayerTeam("FakePlayer");
+        this.playerTeam.setColor(ChatFormatting.AQUA);
+        this.playerTeam.setPlayerPrefix(CraftChatMessage.fromStringOrNull(Utils.getPrefix()));
+        this.getScoreboard().addPlayerToTeam(this.nameContent, this.playerTeam);
     }
 
     public MyFakePlayer(MinecraftServer server, ServerLevel world, String nameContent) {
@@ -51,6 +59,11 @@ public class MyFakePlayer extends ServerPlayer {
     @Override
     public boolean attackable() {
         return false;
+    }
+
+    @Override
+    public boolean allowsListing() {
+        return true;
     }
 
     public void sendJoinPacket() {
@@ -75,5 +88,10 @@ public class MyFakePlayer extends ServerPlayer {
         if (this.connection != null) {
             this.connection.send(packet);
         }
+    }
+
+    @Override
+    public Team getTeam() {
+        return this.playerTeam == null ? super.getTeam() : this.playerTeam;
     }
 }
