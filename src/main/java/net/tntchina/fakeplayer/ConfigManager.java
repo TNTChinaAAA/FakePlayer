@@ -162,7 +162,6 @@ public class ConfigManager {
                          */
                         fk_player.isRealPlayer = true;
                         nmsWorld.getChunkSource().chunkMap.addEntity(fk_player);
-                        nmsWorld.playerChunkLoader.addPlayer(fk_player);
                         nmsWorld.playerChunkLoader.updatePlayer(fk_player);
                         nmsWorld.playerChunkLoader.tick();
                         fk_player.isRealPlayer = false;
