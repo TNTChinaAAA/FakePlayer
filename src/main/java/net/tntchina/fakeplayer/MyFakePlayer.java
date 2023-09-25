@@ -1,11 +1,8 @@
 package net.tntchina.fakeplayer;
 
 import com.mojang.authlib.GameProfile;
-import io.papermc.paper.adventure.AdventureComponent;
 import net.minecraft.ChatFormatting;
-import net.minecraft.core.Rotations;
 import net.minecraft.network.Connection;
-import net.minecraft.network.chat.Component;
 import net.minecraft.network.protocol.Packet;
 import net.minecraft.network.protocol.PacketFlow;
 import net.minecraft.network.protocol.game.ClientboundAddPlayerPacket;
@@ -16,10 +13,11 @@ import net.minecraft.server.network.ServerGamePacketListenerImpl;
 import net.minecraft.world.level.GameType;
 import net.minecraft.world.scores.PlayerTeam;
 import net.minecraft.world.scores.Team;
-import org.bukkit.ChatColor;
 import org.bukkit.Location;
 import org.bukkit.craftbukkit.v1_20_R1.util.CraftChatMessage;
 import org.bukkit.entity.Player;
+
+import java.lang.reflect.Field;
 import java.util.UUID;
 
 public class MyFakePlayer extends ServerPlayer {
@@ -42,6 +40,20 @@ public class MyFakePlayer extends ServerPlayer {
         this.playerTeam = this.getScoreboard().addPlayerTeam("FakePlayer");
         this.playerTeam.setColor(ChatFormatting.AQUA);
         this.playerTeam.setPlayerPrefix(CraftChatMessage.fromStringOrNull(Utils.getPrefix()));
+        this.playerTeam.setNameTagVisibility(Team.Visibility.ALWAYS);
+        this.setAllowsListing();
+        //this.playerTeam.setDisplayName(CraftChatMessage.fromStringOrNull("我他妈真的好6啊"));
+       /*
+
+        ObjectiveCriteria.RenderType renderType = ObjectiveCriteria.RenderType.INTEGER;
+        Objective o = this.getScoreboard().addObjective("test", ObjectiveCriteria.DUMMY, CraftChatMessage.fromStringOrNull(ChatColor.GREEN + "TEST"), renderType);
+
+        //o.setRenderType(ObjectiveCriteria.RenderType.INTEGER);
+        int slotNumber = Scoreboard.DISPLAY_SLOT_BELOW_NAME;
+        this.getScoreboard().setDisplayObjective(slotNumber, o);
+
+        */
+
         this.getScoreboard().addPlayerToTeam(this.nameContent, this.playerTeam);
     }
 
@@ -55,16 +67,29 @@ public class MyFakePlayer extends ServerPlayer {
         return true;
     }*/
 
+    public void setAllowsListing() {
+        try {
+            Field f = ServerPlayer.class.getDeclaredField("cU");
+
+            if (f != null) {
+                f.setAccessible(true);
+                f.setBoolean(this, true);
+            }
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+    }
 
     @Override
     public boolean attackable() {
         return false;
     }
 
+    /*
     @Override
     public boolean allowsListing() {
         return true;
-    }
+    }*/
 
     public void sendJoinPacket() {
         this.send((new ClientboundAddPlayerPacket(this)));

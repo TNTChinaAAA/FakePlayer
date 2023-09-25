@@ -20,7 +20,7 @@ permissions:
     default: op
   fakePlayer.execute:
     description: Execute the command(s).
-    default: op
+    default: true
 commands:
   fakePlayer:
     aliases: fp

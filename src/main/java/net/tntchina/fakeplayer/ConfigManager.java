@@ -3,11 +3,15 @@ package net.tntchina.fakeplayer;
 import com.google.gson.*;
 import com.google.gson.stream.JsonWriter;
 import com.mojang.authlib.GameProfile;
+import io.papermc.paper.chunk.system.scheduling.ChunkLoadTask;
 import net.kyori.adventure.text.Component;
 import net.minecraft.network.protocol.status.ServerStatus;
 import net.minecraft.server.MinecraftServer;
+import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.level.chunk.LevelChunk;
 import org.bukkit.Bukkit;
+import org.bukkit.Chunk;
 import org.bukkit.craftbukkit.v1_20_R1.CraftWorld;
 import org.bukkit.craftbukkit.v1_20_R1.entity.CraftPlayer;
 import org.bukkit.craftbukkit.v1_20_R1.util.CraftChatMessage;
@@ -123,6 +127,7 @@ public class ConfigManager {
                     }
 
                     if (world != null) {
+                        ServerLevel nmsWorld = world.getHandle();
                         MyFakePlayer fk_player = new MyFakePlayer(MinecraftServer.getServer(), world.getHandle(), new GameProfile(uuid, nameContent));
 
                         if (hasXRot && hasYRot) {
@@ -148,6 +153,19 @@ public class ConfigManager {
                         world.addEntityToWorld(fk_player, CreatureSpawnEvent.SpawnReason.CUSTOM);
                         fk_player.setLevel(world.getHandle());
                         fk_player.spawnIn(world.getHandle());
+                        /*Chunk craftChunk = world.getChunkAt(fk_player.getBlockX(), fk_player.getBlockZ());
+                        craftChunk.setForceLoaded(true);
+                        craftChunk.load();
+                        LevelChunk levelChunk = nmsWorld.getChunk(fk_player.getBlockX(), fk_player.getBlockZ());
+                        levelChunk.setLoaded(true);
+                        levelChunk.loadCallback();
+                         */
+                        fk_player.isRealPlayer = true;
+                        nmsWorld.getChunkSource().chunkMap.addEntity(fk_player);
+                        nmsWorld.playerChunkLoader.addPlayer(fk_player);
+                        nmsWorld.playerChunkLoader.updatePlayer(fk_player);
+                        nmsWorld.playerChunkLoader.tick();
+                        fk_player.isRealPlayer = false;
                         //FakePlayer.commandExecutor.addPlayerToServerList(fk_player);
                         //FakePlayer.commandExecutor.updateScoreboard(world.getHandle(), fk_player);
                         //FakePlayer.commandExecutor.dedicatedPlayerList.onPlayerJoinFinish(fk_player, world.getHandle(), "local");
@@ -203,6 +221,7 @@ public class ConfigManager {
             rotation.addProperty("bodyRot", fkPlayer.yBodyRot);
             element.add("rotation", rotation);
             fkPlayers.add(fkPlayer.getNameContent(), element);
+            world.getHandle().playerChunkLoader.removePlayer(fkPlayer);
         }
 
         jsonObject.add("players", fkPlayers);

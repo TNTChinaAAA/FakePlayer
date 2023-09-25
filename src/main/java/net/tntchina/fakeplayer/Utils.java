@@ -12,13 +12,16 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.server.network.ServerGamePacketListenerImpl;
 import net.minecraft.world.entity.Entity;
+import net.minecraft.world.scores.Scoreboard;
 import org.bukkit.*;
 import org.bukkit.craftbukkit.v1_20_R1.CraftWorld;
 import org.bukkit.craftbukkit.v1_20_R1.entity.CraftPlayer;
+import org.bukkit.craftbukkit.v1_20_R1.scoreboard.CraftScoreboard;
 import org.bukkit.craftbukkit.v1_20_R1.util.CraftChatMessage;
 import org.bukkit.entity.Player;
 import org.bukkit.event.entity.CreatureSpawnEvent;
 
+import java.lang.reflect.Constructor;
 import java.util.*;
 import java.util.logging.Logger;
 
@@ -221,5 +224,23 @@ public class Utils {
         npc.setCustomNameVisible(true);
         npc.setCustomName(CraftChatMessage.fromStringOrNull(btName));
         //TODO: set color name
+    }
+
+    public static CraftScoreboard getCraftScoreboard(Scoreboard scoreboard) {
+        //CraftScoreboardManager scoreboardManager = (CraftScoreboardManager) Bukkit.getScoreboardManager();
+        Constructor<CraftScoreboard> cons = null;
+
+        try {
+            cons = CraftScoreboard.class.getDeclaredConstructor(Scoreboard.class);
+
+            if (cons != null) {
+                cons.setAccessible(true);
+                return cons.newInstance(scoreboard);
+            }
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+
+        return null;
     }
 }

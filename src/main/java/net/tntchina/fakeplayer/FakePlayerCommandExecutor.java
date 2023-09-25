@@ -15,6 +15,7 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.server.players.GameProfileCache;
 import net.minecraft.server.players.PlayerList;
 import net.minecraft.world.entity.Entity;
+import net.minecraft.world.level.chunk.LevelChunk;
 import net.minecraft.world.scores.PlayerTeam;
 import org.bukkit.*;
 import org.bukkit.command.Command;
@@ -95,6 +96,7 @@ public class FakePlayerCommandExecutor implements CommandExecutor {
 
     public boolean onCommand(CommandSender sender, Command command, String alias, String[] args){
         this.server = MinecraftServer.getServer();
+        sender.hasPermission("");
         //Bukkit.savePlayers();
 
         if (args.length >= 1) {
@@ -104,6 +106,7 @@ public class FakePlayerCommandExecutor implements CommandExecutor {
                 if (!(sender instanceof Player)) {
                     //logger.info(sender.getName()); result: CONSOLE
                     this.sendMessage("The command can only be used by player, not for the terminal operator.", ChatColor.RED, sender);
+
                     return true;
                 }
 
@@ -168,6 +171,19 @@ public class FakePlayerCommandExecutor implements CommandExecutor {
                             Utils.setFakePlayerColorName(args[1], npc);//TODO: set color name.
                             world.addEntityToWorld(npc, CreatureSpawnEvent.SpawnReason.CUSTOM);
                             npc.spawnIn(nmsWorld);
+                            /*Chunk craftChunk = world.getChunkAt(npc.getBlockX(), npc.getBlockZ());
+                            craftChunk.setForceLoaded(true);
+                            craftChunk.load();
+                            LevelChunk levelChunk = nmsWorld.getChunk(npc.getBlockX(), npc.getBlockZ());
+                            levelChunk.setLoaded(true);
+                            levelChunk.loadCallback();
+                            */
+                            npc.isRealPlayer = true;
+                            nmsWorld.getChunkSource().chunkMap.addEntity(npc);
+                            nmsWorld.playerChunkLoader.addPlayer(npc);
+                            nmsWorld.playerChunkLoader.updatePlayer(npc);
+                            nmsWorld.playerChunkLoader.tick();
+                            npc.isRealPlayer = false;
                             //this.addPlayerToServerList(npc);
                             //nmsWorld.addNewPlayer(npc);
                             //this.updateScoreboard(nmsWorld, npc);
@@ -184,9 +200,15 @@ public class FakePlayerCommandExecutor implements CommandExecutor {
 
                             //server.getPlayerList().placeNewPlayer(npc.connection.connection, npc);
                             //npc.sendJoinPacket(); //TODO: send joining game packet.
+
+                            /*
+
+
                             for (String s : realPlayer.getTags()) {
                                 logger.info("Tag: " + s);
                             }
+
+                            */
 
                             for (ServerPlayer player__ : server.getPlayerList().getPlayers()) {
                                 if (player__.isRealPlayer && !(player__ instanceof MyFakePlayer)) {
@@ -242,7 +264,9 @@ public class FakePlayerCommandExecutor implements CommandExecutor {
                             pla_.kill();
                             ServerLevel nmsWorld = fkPlayerMaps.get(pla_).getHandle();
                             nmsWorld.removePlayerImmediately(pla_, Entity.RemovalReason.KILLED);
+                            pla_.isRealPlayer = true;
                             nmsWorld.getChunkSource().removeEntity(pla_);
+                            pla_.isRealPlayer = false;
                             isFakeExisting = true;
                             uuid__ = pla_.getUUID();
                             this.removePlayerFromServerList(pla_);
@@ -464,7 +488,9 @@ public class FakePlayerCommandExecutor implements CommandExecutor {
             }
 
             nmsWorld.removePlayerImmediately(npc, Entity.RemovalReason.KILLED);
+            npc.isRealPlayer = true;
             nmsWorld.getChunkSource().removeEntity(npc);
+            npc.isRealPlayer = false;
             this.removePlayerFromServerList(npc);
         }
 
