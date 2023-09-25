@@ -179,8 +179,7 @@ public class FakePlayerCommandExecutor implements CommandExecutor {
                             levelChunk.loadCallback();
                             */
                             npc.isRealPlayer = true;
-                            //nmsWorld.getChunkSource().chunkMap.addEntity(npc);
-                            nmsWorld.playerChunkLoader.addPlayer(npc);
+                            nmsWorld.getChunkSource().chunkMap.addEntity(npc);
                             nmsWorld.playerChunkLoader.updatePlayer(npc);
                             nmsWorld.playerChunkLoader.tick();
                             npc.isRealPlayer = false;
