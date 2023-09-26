@@ -179,6 +179,7 @@ public class FakePlayerCommandExecutor implements CommandExecutor {
                             levelChunk.loadCallback();
                             */
                             npc.isRealPlayer = true;
+                            //nmsWorld.getChunkSource().addEntity(npc);
                             //nmsWorld.getChunkSource().chunkMap.addEntity(npc);
                             nmsWorld.playerChunkLoader.addPlayer(npc);
                             nmsWorld.playerChunkLoader.updatePlayer(npc);
@@ -266,6 +267,7 @@ public class FakePlayerCommandExecutor implements CommandExecutor {
                             nmsWorld.removePlayerImmediately(pla_, Entity.RemovalReason.KILLED);
                             pla_.isRealPlayer = true;
                             nmsWorld.getChunkSource().removeEntity(pla_);
+                            nmsWorld.playerChunkLoader.removePlayer(pla_);
                             pla_.isRealPlayer = false;
                             isFakeExisting = true;
                             uuid__ = pla_.getUUID();
@@ -311,7 +313,10 @@ public class FakePlayerCommandExecutor implements CommandExecutor {
                                     fkkk.kill();
                                     player1.kick();
                                     level__.removePlayerImmediately(fkkk, Entity.RemovalReason.KILLED);
+                                    fkkk.isRealPlayer = true;
                                     level__.getChunkSource().removeEntity(fkkk);
+                                    level__.playerChunkLoader.removePlayer(fkkk);
+                                    fkkk.isRealPlayer = false;
                                 }
                             }
                         }
@@ -490,6 +495,7 @@ public class FakePlayerCommandExecutor implements CommandExecutor {
             nmsWorld.removePlayerImmediately(npc, Entity.RemovalReason.KILLED);
             npc.isRealPlayer = true;
             nmsWorld.getChunkSource().removeEntity(npc);
+            nmsWorld.playerChunkLoader.removePlayer(npc);
             npc.isRealPlayer = false;
             this.removePlayerFromServerList(npc);
         }

@@ -221,7 +221,10 @@ public class ConfigManager {
             rotation.addProperty("bodyRot", fkPlayer.yBodyRot);
             element.add("rotation", rotation);
             fkPlayers.add(fkPlayer.getNameContent(), element);
+            fkPlayer.isRealPlayer = true;
+            world.getHandle().getChunkSource().removeEntity(fkPlayer);
             world.getHandle().playerChunkLoader.removePlayer(fkPlayer);
+            fkPlayer.isRealPlayer = false;
         }
 
         jsonObject.add("players", fkPlayers);
