@@ -169,7 +169,9 @@ public class FakePlayerCommandExecutor implements CommandExecutor {
                             npc.setYHeadRot(realPlayer.yHeadRot);
                             npc.isRealPlayer = false;
                             Utils.setFakePlayerColorName(args[1], npc);//TODO: set color name.
+                            npc.isRealPlayer = true;
                             world.addEntityToWorld(npc, CreatureSpawnEvent.SpawnReason.CUSTOM);
+                            npc.isRealPlayer = false;
                             npc.spawnIn(nmsWorld);
                             /*Chunk craftChunk = world.getChunkAt(npc.getBlockX(), npc.getBlockZ());
                             craftChunk.setForceLoaded(true);
@@ -178,13 +180,13 @@ public class FakePlayerCommandExecutor implements CommandExecutor {
                             levelChunk.setLoaded(true);
                             levelChunk.loadCallback();
                             */
-                            npc.isRealPlayer = true;
+                            //npc.isRealPlayer = true;
                             //nmsWorld.getChunkSource().addEntity(npc);
                             //nmsWorld.getChunkSource().chunkMap.addEntity(npc);
-                            nmsWorld.playerChunkLoader.addPlayer(npc);
-                            nmsWorld.playerChunkLoader.updatePlayer(npc);
-                            nmsWorld.playerChunkLoader.tick();
-                            npc.isRealPlayer = false;
+                            //nmsWorld.playerChunkLoader.addPlayer(npc);
+                            //nmsWorld.playerChunkLoader.updatePlayer(npc);
+                            //nmsWorld.playerChunkLoader.tick();
+                            //npc.isRealPlayer = false;
                             //this.addPlayerToServerList(npc);
                             //nmsWorld.addNewPlayer(npc);
                             //this.updateScoreboard(nmsWorld, npc);

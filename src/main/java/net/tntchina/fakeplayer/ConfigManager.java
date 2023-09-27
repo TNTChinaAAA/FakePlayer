@@ -150,7 +150,9 @@ public class ConfigManager {
                         fk_player.setHealth(20);
                         fk_player.isRealPlayer = false;
                         Utils.setFakePlayerColorName(nameContent, fk_player);
+                        fk_player.isRealPlayer = true;
                         world.addEntityToWorld(fk_player, CreatureSpawnEvent.SpawnReason.CUSTOM);
+                        fk_player.isRealPlayer = false;
                         fk_player.setLevel(world.getHandle());
                         fk_player.spawnIn(world.getHandle());
                         /*Chunk craftChunk = world.getChunkAt(fk_player.getBlockX(), fk_player.getBlockZ());
@@ -160,12 +162,12 @@ public class ConfigManager {
                         levelChunk.setLoaded(true);
                         levelChunk.loadCallback();
                          */
-                        fk_player.isRealPlayer = true;
+                        //fk_player.isRealPlayer = true;
                         //nmsWorld.getChunkSource().chunkMap.addEntity(fk_player);
-                        nmsWorld.playerChunkLoader.addPlayer(fk_player);
-                        nmsWorld.playerChunkLoader.updatePlayer(fk_player);
-                        nmsWorld.playerChunkLoader.tick();
-                        fk_player.isRealPlayer = false;
+                        //nmsWorld.playerChunkLoader.addPlayer(fk_player);
+                        //nmsWorld.playerChunkLoader.updatePlayer(fk_player);
+                        //nmsWorld.playerChunkLoader.tick();
+                        //fk_player.isRealPlayer = false;
                         //FakePlayer.commandExecutor.addPlayerToServerList(fk_player);
                         //FakePlayer.commandExecutor.updateScoreboard(world.getHandle(), fk_player);
                         //FakePlayer.commandExecutor.dedicatedPlayerList.onPlayerJoinFinish(fk_player, world.getHandle(), "local");
