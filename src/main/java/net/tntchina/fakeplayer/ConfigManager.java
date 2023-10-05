@@ -18,6 +18,8 @@ import org.bukkit.craftbukkit.v1_20_R1.util.CraftChatMessage;
 import org.bukkit.event.entity.CreatureSpawnEvent;
 
 import java.io.*;
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
 
@@ -129,6 +131,7 @@ public class ConfigManager {
                     if (world != null) {
                         ServerLevel nmsWorld = world.getHandle();
                         MyFakePlayer fk_player = new MyFakePlayer(MinecraftServer.getServer(), world.getHandle(), new GameProfile(uuid, nameContent));
+                        fk_player.setLevel(world.getHandle());
 
                         if (hasXRot && hasYRot) {
                             fk_player.setXRot(xRot);
@@ -150,11 +153,9 @@ public class ConfigManager {
                         fk_player.setHealth(20);
                         fk_player.isRealPlayer = false;
                         Utils.setFakePlayerColorName(nameContent, fk_player);
-                        fk_player.isRealPlayer = true;
-                        world.addEntityToWorld(fk_player, CreatureSpawnEvent.SpawnReason.CUSTOM);
-                        fk_player.isRealPlayer = false;
-                        fk_player.setLevel(world.getHandle());
-                        fk_player.spawnIn(world.getHandle());
+                        Utils.addSpecificPlayer(fk_player, world);
+                        //world.addEntityToWorld(fk_player, CreatureSpawnEvent.SpawnReason.CUSTOM);
+                        //fk_player.spawnIn(world.getHandle());
                         /*Chunk craftChunk = world.getChunkAt(fk_player.getBlockX(), fk_player.getBlockZ());
                         craftChunk.setForceLoaded(true);
                         craftChunk.load();
@@ -178,6 +179,8 @@ public class ConfigManager {
                         }
 
                         fk_player.isRealPlayer = false;
+                        Utils.fakePlayerList.add(fk_player);
+                        Utils.fakePlayerMap.put(fk_player, world);
 
                         for (ServerPlayer player__ : MinecraftServer.getServer().getPlayerList().getPlayers()) {
                             if (player__.isRealPlayer && !(player__ instanceof MyFakePlayer)) {
@@ -223,12 +226,11 @@ public class ConfigManager {
             rotation.addProperty("bodyRot", fkPlayer.yBodyRot);
             element.add("rotation", rotation);
             fkPlayers.add(fkPlayer.getNameContent(), element);
-            fkPlayer.isRealPlayer = true;
-            world.getHandle().getChunkSource().removeEntity(fkPlayer);
-            world.getHandle().playerChunkLoader.removePlayer(fkPlayer);
-            fkPlayer.isRealPlayer = false;
+            Utils.removeSpecificPlayer(fkPlayer, world.getHandle());
         }
 
+        Utils.fakePlayerList = new ArrayList<>();
+        Utils.fakePlayerMap = new HashMap<>();
         jsonObject.add("players", fkPlayers);
 
         try {

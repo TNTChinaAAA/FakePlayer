@@ -6,8 +6,7 @@ import org.bukkit.craftbukkit.v1_20_R1.entity.CraftPlayer;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
-import org.bukkit.event.player.PlayerJoinEvent;
-import org.bukkit.event.player.PlayerQuitEvent;
+import org.bukkit.event.player.*;
 
 public class PlayerListener implements Listener {
 
@@ -15,6 +14,7 @@ public class PlayerListener implements Listener {
     public PlayerListener(FakePlayer fakePlayer) {
         this.fakePlayer = fakePlayer;
     }
+
 
     @EventHandler
     public void onPlayerJoin(PlayerJoinEvent event) {
@@ -40,5 +40,30 @@ public class PlayerListener implements Listener {
 
         }
          */
+    }
+
+    @EventHandler
+    public void onPlayerChangedWorld(PlayerChangedWorldEvent event) {
+        CraftPlayer player = (CraftPlayer) event.getPlayer();
+
+        if (player.getHandle().isRealPlayer && !(player.getHandle() instanceof MyFakePlayer)) {
+
+            for (MyFakePlayer fkPlayer : Utils.getFakePlayersList()) {
+                //Utils.doSending(player.getHandle().connection, fkPlayer);
+                //Utils.doRemoving(player.getHandle().connection, fkPlayer);
+                Utils.doSending(player.getHandle().connection, fkPlayer);
+            }
+        }
+    }
+
+    @EventHandler
+    public void onPlayerRespawn(PlayerRespawnEvent event) {
+        CraftPlayer player = (CraftPlayer) event.getPlayer();
+
+        if (player.getHandle().isRealPlayer && !(player.getHandle() instanceof MyFakePlayer)) {
+            for (MyFakePlayer fkPlayer : Utils.getFakePlayersList()) {
+                Utils.doSending(player.getHandle().connection, fkPlayer);
+            }
+        }
     }
 }

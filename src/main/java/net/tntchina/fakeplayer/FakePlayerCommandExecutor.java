@@ -169,10 +169,10 @@ public class FakePlayerCommandExecutor implements CommandExecutor {
                             npc.setYHeadRot(realPlayer.yHeadRot);
                             npc.isRealPlayer = false;
                             Utils.setFakePlayerColorName(args[1], npc);//TODO: set color name.
-                            npc.isRealPlayer = true;
-                            world.addEntityToWorld(npc, CreatureSpawnEvent.SpawnReason.CUSTOM);
-                            npc.isRealPlayer = false;
-                            npc.spawnIn(nmsWorld);
+                            Utils.addSpecificPlayer(npc, world);
+                            //world.addEntityToWorld(npc, CreatureSpawnEvent.SpawnReason.CUSTOM);
+                            //nmsWorld.getChunkSource().chunkMap.addDis
+                            //npc.spawnIn(nmsWorld);
                             /*Chunk craftChunk = world.getChunkAt(npc.getBlockX(), npc.getBlockZ());
                             craftChunk.setForceLoaded(true);
                             craftChunk.load();
@@ -212,6 +212,9 @@ public class FakePlayerCommandExecutor implements CommandExecutor {
                             }
 
                             */
+
+                            Utils.fakePlayerList.add(npc);
+                            Utils.fakePlayerMap.put(npc, world);
 
                             for (ServerPlayer player__ : server.getPlayerList().getPlayers()) {
                                 if (player__.isRealPlayer && !(player__ instanceof MyFakePlayer)) {
@@ -263,14 +266,11 @@ public class FakePlayerCommandExecutor implements CommandExecutor {
 
                     for (MyFakePlayer pla_ : fkPlayersList) {
                         if (pla_.getNameContent().equals(args[1])) {
+                            ServerLevel nmsWorld = fkPlayerMaps.get(pla_).getHandle();
+                            Utils.removeSpecificPlayerFromList(pla_, nmsWorld); //TODO: remove the player from some lists.
                             pla_.setHealth(0);
                             pla_.kill();
-                            ServerLevel nmsWorld = fkPlayerMaps.get(pla_).getHandle();
                             nmsWorld.removePlayerImmediately(pla_, Entity.RemovalReason.KILLED);
-                            pla_.isRealPlayer = true;
-                            nmsWorld.getChunkSource().removeEntity(pla_);
-                            nmsWorld.playerChunkLoader.removePlayer(pla_);
-                            pla_.isRealPlayer = false;
                             isFakeExisting = true;
                             uuid__ = pla_.getUUID();
                             this.removePlayerFromServerList(pla_);
@@ -311,14 +311,11 @@ public class FakePlayerCommandExecutor implements CommandExecutor {
                             if (player.getHandle() != null) {
                                 if (player.getHandle() instanceof MyFakePlayer) {
                                     MyFakePlayer fkkk = (MyFakePlayer) player.getHandle();
+                                    Utils.removeSpecificPlayerFromList(fkkk, level__); //TODO: remove the player from some lists.
                                     player1.setHealth(0);
                                     fkkk.kill();
                                     player1.kick();
                                     level__.removePlayerImmediately(fkkk, Entity.RemovalReason.KILLED);
-                                    fkkk.isRealPlayer = true;
-                                    level__.getChunkSource().removeEntity(fkkk);
-                                    level__.playerChunkLoader.removePlayer(fkkk);
-                                    fkkk.isRealPlayer = false;
                                 }
                             }
                         }
@@ -367,10 +364,12 @@ public class FakePlayerCommandExecutor implements CommandExecutor {
         return false;
     }
 
+    @Deprecated
     public void updateScoreboard(ServerLevel nmsWorld, MyFakePlayer npc) {
         this.dedicatedPlayerList.updateEntireScoreboard(nmsWorld.getScoreboard(), npc);
     }
 
+    @Deprecated
     public void addPlayerToServerList(MyFakePlayer fakePlayer) {
         GameProfile gameprofile = fakePlayer.getGameProfile();
         GameProfileCache usercache = this.server.getProfileCache();
@@ -414,7 +413,7 @@ public class FakePlayerCommandExecutor implements CommandExecutor {
         this.players.remove(fakePlayer);
     }
 
-    /*
+    @Deprecated
     public void listNames() {
         if (this.hasPlayersByUUIDMap) {
             for (Map.Entry<UUID, ServerPlayer> entry : playersByUUID.entrySet()) {
@@ -428,7 +427,6 @@ public class FakePlayerCommandExecutor implements CommandExecutor {
             }
         }
     }
-     */
 
     public void listAllPlayer(Map<MyFakePlayer, CraftWorld> playerMaps, CommandSender sender) {
         List<MyFakePlayer> list = new ArrayList<>(playerMaps.keySet());
@@ -477,6 +475,11 @@ public class FakePlayerCommandExecutor implements CommandExecutor {
         for(Map.Entry<MyFakePlayer, CraftWorld> entry : Utils.getFakePlayerMaps().entrySet()) {
             MyFakePlayer npc = entry.getKey();
             ServerLevel nmsWorld = entry.getValue().getHandle();
+
+            if (nmsWorld.players().contains(npc)) {
+                nmsWorld.players().remove(npc);
+            }
+
             removeList.add(npc.getUUID());
             npc.setHealth(0);
             npc.kill();
@@ -495,13 +498,12 @@ public class FakePlayerCommandExecutor implements CommandExecutor {
             }
 
             nmsWorld.removePlayerImmediately(npc, Entity.RemovalReason.KILLED);
-            npc.isRealPlayer = true;
-            nmsWorld.getChunkSource().removeEntity(npc);
-            nmsWorld.playerChunkLoader.removePlayer(npc);
-            npc.isRealPlayer = false;
+            Utils.removeSpecificPlayer(npc, nmsWorld);
             this.removePlayerFromServerList(npc);
         }
 
+        Utils.fakePlayerList = new ArrayList<>();
+        Utils.fakePlayerMap = new HashMap<>();
         return removeList;
     }
 

@@ -91,6 +91,7 @@ public class MyFakePlayer extends ServerPlayer {
         return true;
     }*/
 
+    @Deprecated
     public void sendJoinPacket() {
         this.send((new ClientboundAddPlayerPacket(this)));
     }

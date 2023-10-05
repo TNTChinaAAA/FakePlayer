@@ -3,11 +3,10 @@ package net.tntchina.fakeplayer;
 import net.kyori.adventure.text.Component;
 import net.minecraft.network.Connection;
 import net.minecraft.network.protocol.PacketFlow;
-import net.minecraft.network.protocol.game.ClientboundAddPlayerPacket;
-import net.minecraft.network.protocol.game.ClientboundPlayerInfoRemovePacket;
-import net.minecraft.network.protocol.game.ClientboundPlayerInfoUpdatePacket;
+import net.minecraft.network.protocol.game.*;
 import net.minecraft.network.protocol.game.ClientboundPlayerInfoUpdatePacket.Action;
 import net.minecraft.server.MinecraftServer;
+import net.minecraft.server.level.ChunkMap;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.server.network.ServerGamePacketListenerImpl;
@@ -22,15 +21,37 @@ import org.bukkit.entity.Player;
 import org.bukkit.event.entity.CreatureSpawnEvent;
 
 import java.lang.reflect.Constructor;
+import java.lang.reflect.Field;
+import java.lang.reflect.Method;
 import java.util.*;
 import java.util.logging.Logger;
 
 public class Utils {
 
-    /*
+    public static Field lastOverloadWarningField = null;
+    public static Method addPlayerToDistanceMapsMethod = null;
+    public static Method removePlayerFromDistanceMapsMethod = null;
+
+    static {
+        try {
+            Utils.lastOverloadWarningField = MinecraftServer.class.getDeclaredField("ae");
+            Utils.addPlayerToDistanceMapsMethod = ChunkMap.class.getDeclaredMethod("addPlayerToDistanceMaps", ServerPlayer.class);
+            Utils.removePlayerFromDistanceMapsMethod = ChunkMap.class.getDeclaredMethod("removePlayerFromDistanceMaps", ServerPlayer.class);
+            Utils.lastOverloadWarningField.setAccessible(true);
+            Utils.addPlayerToDistanceMapsMethod.setAccessible(true);
+            Utils.removePlayerFromDistanceMapsMethod.setAccessible(true);
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    public static List<MyFakePlayer> fakePlayerList = new ArrayList<>();
+    public static Map<MyFakePlayer, CraftWorld> fakePlayerMap = new HashMap<>();
+
+    @Deprecated
     public static ServerPlayer getServerPlayerByName(String name, ServerLevel world) {
         for (ServerPlayer player : world.players()) {
-            Component component = player.getName();
+            net.minecraft.network.chat.Component component = player.getName();
             String n = component.toString();
 
             if (n.equals("literal{" + name + "}")) {
@@ -39,9 +60,9 @@ public class Utils {
         }
 
         return null;
-    }*/
+    }
 
-    /*
+    @Deprecated
     public static boolean isFakePlayerExisting(String name) {
         for (World world : Bukkit.getWorlds()) {
             CraftWorld world2 = (CraftWorld) world;
@@ -68,6 +89,7 @@ public class Utils {
         return false;
     }
 
+    @Deprecated
     public static ServerPlayer getFakePlayer(String name) {
         for (World world : Bukkit.getWorlds()) {
             CraftWorld world2 = (CraftWorld) world;
@@ -94,6 +116,7 @@ public class Utils {
         return null;
     }
 
+    @Deprecated
     public static CraftWorld getWorldByPlayer(ServerPlayer player) {
         for (World world : Bukkit.getWorlds()) {
             CraftWorld world2 = (CraftWorld) world;
@@ -113,9 +136,10 @@ public class Utils {
         }
 
         return null;
-    }*/
+    }
 
-    public static List<MyFakePlayer> getFakePlayersList() {
+    @Deprecated
+    public static List<MyFakePlayer> o_getFakePlayersList() {
         List<MyFakePlayer> list = new ArrayList<>();
 
         for(World world : Bukkit.getWorlds()) {
@@ -138,7 +162,16 @@ public class Utils {
         return list;
     }
 
+    public static List<MyFakePlayer> getFakePlayersList() {
+        return Utils.fakePlayerList;
+    }
+
     public static Map<MyFakePlayer, CraftWorld> getFakePlayerMaps() {
+        return Utils.fakePlayerMap;
+    }
+
+    @Deprecated
+    public static Map<MyFakePlayer, CraftWorld> o_getFakePlayerMaps() {
         Map<MyFakePlayer, CraftWorld> playerMaps = new HashMap<>();
 
         for(World world : Bukkit.getWorlds()) {
@@ -161,7 +194,6 @@ public class Utils {
         return playerMaps;
     }
 
-
     public static void info(String message) {
         Logger logger = FakePlayer.logger;
         logger.info(message);
@@ -172,27 +204,37 @@ public class Utils {
         return ChatColor.GOLD + "[" + ChatColor.GREEN + "FakePlayer" + ChatColor.GOLD + "]";
     }
 
-    /*
+    @Deprecated
     public static String getFakePlayerName(String rawName) {
         return rawName.substring(rawName.indexOf(ChatColor.AQUA + "") + 2);
-    }*/
+    }
 
 
     public static String generateName(String name) {
         return Utils.getPrefix() + ChatColor.AQUA + name;
     }
 
+    @Deprecated
+    public static void doAddingEntity(ServerGamePacketListenerImpl connection, MyFakePlayer fkPlayer) {
+        connection.send(new ClientboundAddEntityPacket(fkPlayer));
+    }
+
+    public static void doUpdatePlayer(ServerGamePacketListenerImpl connection, MyFakePlayer fkPlayer) {
+        connection.send(new ClientboundPlayerInfoUpdatePacket(Action.UPDATE_LISTED, fkPlayer));
+        connection.send(new ClientboundPlayerInfoUpdatePacket(Action.UPDATE_DISPLAY_NAME, fkPlayer));
+    }
+
     public static void doSending(ServerGamePacketListenerImpl connection, MyFakePlayer fkPlayer) {
         connection.send(new ClientboundPlayerInfoUpdatePacket(Action.ADD_PLAYER, fkPlayer)); //TODO: send update player info packet.
         connection.send(new ClientboundAddPlayerPacket(fkPlayer));
-        connection.send(new ClientboundPlayerInfoUpdatePacket(Action.UPDATE_LISTED, fkPlayer));
-        connection.send(new ClientboundPlayerInfoUpdatePacket(Action.UPDATE_DISPLAY_NAME, fkPlayer));
+        Utils.doUpdatePlayer(connection, fkPlayer);
     }
 
     public static void doRemoving(ServerGamePacketListenerImpl connection, MyFakePlayer fkPlayer) {
         List<UUID> l = new ArrayList<>();
         l.add(fkPlayer.getUUID());
         connection.send(new ClientboundPlayerInfoRemovePacket(l));
+        connection.send(new ClientboundRemoveEntitiesPacket(fkPlayer.getId()));
         //TODO: send remove player info packet.
     }
 
@@ -226,6 +268,64 @@ public class Utils {
         //TODO: set color name
     }
 
+    public static void addSpecificPlayer(MyFakePlayer fakePlayer, CraftWorld world) {
+        ServerLevel nmsWorld = world.getHandle();
+        fakePlayer.isRealPlayer = true;
+        world.addEntityToWorld(fakePlayer, CreatureSpawnEvent.SpawnReason.CUSTOM);
+
+        /*
+        if (!nmsWorld.playersAffectingSpawning.contains(fakePlayer)) {
+            nmsWorld.playersAffectingSpawning.add(fakePlayer);
+        }
+
+        if (!nmsWorld.players().contains(fakePlayer)) {
+            nmsWorld.players().add(fakePlayer);
+        }
+        */
+
+        //Utils.addPlayerToDistanceMaps(nmsWorld.getChunkSource().chunkMap, fakePlayer);
+        fakePlayer.isRealPlayer = false;
+    }
+
+    public static void removeSpecificPlayerFromList(MyFakePlayer fakePlayer, ServerLevel nmsWorld) {
+        Utils.fakePlayerList.remove(fakePlayer);
+        Utils.fakePlayerMap.remove(fakePlayer);
+        Utils.removeSpecificPlayer(fakePlayer, nmsWorld);
+    }
+
+    public static void removeSpecificPlayer(MyFakePlayer fakePlayer, ServerLevel nmsWorld) {
+        fakePlayer.isRealPlayer = true;
+        nmsWorld.players().remove(fakePlayer);
+        //Utils.removePlayerFromDistanceMaps(nmsWorld.getChunkSource().chunkMap, fakePlayer);
+        nmsWorld.getChunkSource().removeEntity(fakePlayer);
+        nmsWorld.playerChunkLoader.removePlayer(fakePlayer);
+        nmsWorld.playersAffectingSpawning.remove(fakePlayer);
+        fakePlayer.isRealPlayer = false;
+    }
+
+    @Deprecated
+    public static void addPlayerToDistanceMaps(ChunkMap chunkMap, ServerPlayer player) {
+        try {
+            if (Utils.addPlayerToDistanceMapsMethod != null) {
+                Utils.addPlayerToDistanceMapsMethod.invoke(chunkMap, player);
+            }
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    @Deprecated
+    public static void removePlayerFromDistanceMaps(ChunkMap chunkMap, ServerPlayer player) {
+        try {
+            if (Utils.removePlayerFromDistanceMapsMethod != null) {
+                Utils.removePlayerFromDistanceMapsMethod.invoke(chunkMap, player);
+            }
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    @Deprecated
     public static CraftScoreboard getCraftScoreboard(Scoreboard scoreboard) {
         //CraftScoreboardManager scoreboardManager = (CraftScoreboardManager) Bukkit.getScoreboardManager();
         Constructor<CraftScoreboard> cons = null;
@@ -242,5 +342,29 @@ public class Utils {
         }
 
         return null;
+    }
+
+    @Deprecated
+    public static boolean isOverloaded() { //This method didn't work
+        MinecraftServer server = MinecraftServer.getServer();
+        long nextTickTime = server.getNextTickTime();
+        long lastOverloadWarning = 0;
+        long i = (System.nanoTime()) / 1000000L - nextTickTime;
+
+        if (Utils.lastOverloadWarningField != null) {
+            try {
+                lastOverloadWarning = (long) Utils.lastOverloadWarningField.get(server);
+            } catch (Exception e) {
+                throw new RuntimeException(e);
+            }
+        } else {
+            return false;
+        }
+
+        if (i > 5000L && server.getNextTickTime() - lastOverloadWarning >= 30000L) {
+            return true;
+        }
+
+        return false;
     }
 }
