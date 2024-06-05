@@ -199,6 +199,16 @@ public class Utils {
         logger.info(message);
     }
 
+    public static boolean isInteger(String str) {
+        try {
+            Integer.parseInt(str);
+        } catch (NumberFormatException e) {
+            return false;
+        }
+
+        return true;
+    }
+
 
     public static String getPrefix() {
         return ChatColor.GOLD + "[" + ChatColor.GREEN + "FakePlayer" + ChatColor.GOLD + "]";

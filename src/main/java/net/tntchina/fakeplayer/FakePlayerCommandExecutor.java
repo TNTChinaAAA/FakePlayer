@@ -5,6 +5,7 @@ import io.netty.channel.Channel;
 import io.netty.channel.socket.InternetProtocolFamily;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
 import net.kyori.adventure.text.Component;
+import net.minecraft.ChatFormatting;
 import net.minecraft.network.Connection;
 import net.minecraft.network.protocol.PacketFlow;
 import net.minecraft.network.protocol.status.ServerStatus;
@@ -27,6 +28,7 @@ import org.bukkit.craftbukkit.v1_20_R1.entity.CraftPlayer;
 import org.bukkit.craftbukkit.v1_20_R1.util.CraftChatMessage;
 import org.bukkit.entity.Player;
 import org.bukkit.event.entity.CreatureSpawnEvent;
+import org.jetbrains.annotations.NotNull;
 
 import java.lang.reflect.Field;
 import java.lang.reflect.ParameterizedType;
@@ -96,17 +98,67 @@ public class FakePlayerCommandExecutor implements CommandExecutor {
 
     public boolean onCommand(CommandSender sender, Command command, String alias, String[] args){
         this.server = MinecraftServer.getServer();
-        sender.hasPermission("");
+        //sender.hasPermission("");
         //Bukkit.savePlayers();
 
         if (args.length >= 1) {
-            if (args[0].equals("add")) {
+            if (args[0].equalsIgnoreCase("chunkStatus")) {
+                //TODO: execute the command "chunkStatus"
+
+                if (sender instanceof Player) {
+                    CraftPlayer player = (CraftPlayer) sender;
+                    CraftWorld world = (CraftWorld) player.getWorld();
+
+                    if (args.length == 3) {
+                        boolean isXInt = Utils.isInteger(args[1]);
+                        boolean isZInt = Utils.isInteger(args[2]);
+
+                        if (isXInt && isZInt) {
+                            int x = Integer.parseInt(args[1]);
+                            int z = Integer.parseInt(args[2]);
+                            this.sendChunkStatus(x, z, player);
+                            return true;
+                        } else {
+                            this.sendMessage("Error! The x and z of the chunk must be integer.", ChatColor.RED, sender);
+                            return true;
+                        }
+                    }
+
+                    this.sendWrongMessage(sender);
+                    return false;
+                } else {
+                    if (args.length == 4) {
+                        CraftWorld world = (CraftWorld) sender.getServer().getWorld(args[1]);
+                        boolean isXInt = Utils.isInteger(args[2]);
+                        boolean isZInt = Utils.isInteger(args[3]);
+
+                        if (world != null) {
+                            if (isXInt && isZInt) {
+                                int x = Integer.parseInt(args[2]);
+                                int z = Integer.parseInt(args[3]);
+                                this.sendChunkStatus(x, z, world, sender);
+                                return true;
+                            } else {
+                                this.sendMessage("Error! The x and z of the chunk must be integer.", ChatColor.RED, sender);
+                                return true;
+                            }
+                        } else {
+                            this.sendMessage("Error! The world called \""+ ChatColor.YELLOW + "[" + ChatColor.LIGHT_PURPLE + args[1] + ChatColor.YELLOW + "]" + ChatColor.RED + "\" is not existed!" , ChatColor.RED, sender);
+                            return true;
+                        }
+                    }
+
+                    this.sendWrongMessage(sender);
+                    return false;
+                }
+            }
+
+            if (args[0].equalsIgnoreCase("add")) {
                 //TODO: execute the command "add".
 
                 if (!(sender instanceof Player)) {
                     //logger.info(sender.getName()); result: CONSOLE
                     this.sendMessage("The command can only be used by player, not for the terminal operator.", ChatColor.RED, sender);
-
                     return true;
                 }
 
@@ -232,7 +284,7 @@ public class FakePlayerCommandExecutor implements CommandExecutor {
                 }
             }
 
-            if (args[0].equals("remove")) {
+            if (args[0].equalsIgnoreCase("remove")) {
                 //TODO: execute the command "remove".
 
                 if (args.length == 1) {
@@ -349,7 +401,7 @@ public class FakePlayerCommandExecutor implements CommandExecutor {
                 }
             }
 
-            if (args[0].equals("list")) {
+            if (args[0].equalsIgnoreCase("list")) {
                 //TODO: execute the command "list".
 
                 if (args.length == 1) {
@@ -362,6 +414,23 @@ public class FakePlayerCommandExecutor implements CommandExecutor {
 
         this.sendWrongMessage(sender);
         return false;
+    }
+
+    public void sendChunkStatus(int x, int z, CraftPlayer player) {
+        CraftWorld world = (CraftWorld) player.getWorld();
+        this.sendChunkStatus(x, z, world, player);
+    }
+
+    public void sendChunkStatus(int x, int z, @NotNull CraftWorld world, CommandSender sender) {
+        boolean isChunkLoaded = world.isChunkInUse(x, z);
+        String loaded = isChunkLoaded ? "loaded" : "unloaded";
+        String isInUse = isChunkLoaded ? "in use" : "not in use";
+        String level = world.getChunkAt(x, z).getLoadLevel().name();
+        String worldName = ChatColor.YELLOW + "[" + ChatColor.LIGHT_PURPLE + world.getName() + ChatColor.YELLOW + "]";
+        String chunkPose = ChatColor.YELLOW + "[" + ChatColor.GOLD + x + "," + z + ChatColor.YELLOW + "]";
+        this.sendMessage("The chunk of " + chunkPose + ChatColor.GREEN + " in " + worldName + ChatColor.GREEN + " is " + loaded, ChatColor.GREEN, sender);
+        this.sendMessage("The chunk of " + chunkPose + ChatColor.GREEN + " in " + worldName + ChatColor.GREEN + " is " + isInUse, ChatColor.GREEN, sender);
+        this.sendMessage("The level of the chunk of " + chunkPose + ChatColor.GREEN + " in " + worldName + ChatColor.GREEN + " is " + level, ChatColor.GREEN, sender);
     }
 
     @Deprecated
@@ -521,11 +590,11 @@ public class FakePlayerCommandExecutor implements CommandExecutor {
     }*/
 
     public void sendMessage(String message, CommandSender sender) {
-        sender.sendMessage(ChatColor.AQUA + "[FakePlayer] " + message);
+        this.sendMessage(message, ChatColor.AQUA, sender);
     }
 
     public void sendMessage(String message, ChatColor chatColor, CommandSender sender) {
-        sender.sendMessage(ChatColor.AQUA + "[FakePlayer] " + chatColor + message);
+        sender.sendMessage(ChatColor.YELLOW + "[" + ChatColor.AQUA + "FakePlayer" + ChatColor.YELLOW + "] " + chatColor + message);
     }
 
     public void sendWrongMessage(CommandSender sender) {

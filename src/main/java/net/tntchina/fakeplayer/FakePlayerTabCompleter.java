@@ -1,8 +1,13 @@
 package net.tntchina.fakeplayer;
 
+import net.minecraft.server.MinecraftServer;
+import org.bukkit.Bukkit;
+import org.bukkit.World;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandSender;
 import org.bukkit.command.TabCompleter;
+import org.bukkit.entity.Player;
+
 import java.util.ArrayList;
 import java.util.List;
 
@@ -23,6 +28,12 @@ public class FakePlayerTabCompleter implements TabCompleter {
                 list.add("add");
                 list.add("remove");
                 list.add("list");
+                list.add("chunkStatus");
+                return list;
+            }
+
+            if (this.getCharsListContain("chunkStatus", args[0])) {
+                list.add("chunkStatus");
                 return list;
             }
 
@@ -63,6 +74,14 @@ public class FakePlayerTabCompleter implements TabCompleter {
                 }
 
                 return list;
+            }
+        } else if (args.length == 2 && args[0].equals("chunkStatus")) {
+            if (!(commandSender instanceof Player)) {
+                //TODO: send world tab complete
+
+                for (World world : Bukkit.getWorlds()) {
+                    list.add(world.getName());
+                }
             }
         }
 

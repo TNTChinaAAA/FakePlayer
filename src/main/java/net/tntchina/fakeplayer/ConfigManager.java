@@ -46,116 +46,118 @@ public class ConfigManager {
         if (fr != null) {
             BufferedReader reader = new BufferedReader(fr);
             JsonObject json = gson.fromJson(reader, JsonObject.class);
-            Map<String, CraftWorld> worlds = Utils.getWorldMaps();
 
-            if (json.has("players")) {
-                JsonObject players = (JsonObject) json.get("players");
+            if (json != null) {
+                Map<String, CraftWorld> worlds = Utils.getWorldMaps();
 
-                Map<String, JsonElement> map = players.asMap();
+                if (json.has("players")) {
+                    JsonObject players = (JsonObject) json.get("players");
 
-                for (Map.Entry<String, JsonElement> entry : map.entrySet()) {
-                    String nameContent = entry.getKey();
-                    JsonObject properties = (JsonObject) entry.getValue();
-                    UUID uuid = UUID.randomUUID();
-                    CraftWorld world = null;
-                    float xRot = 0;
-                    boolean hasXRot = false;
-                    float yRot = 0;
-                    boolean hasYRot = false;
-                    float headRot = 0;
-                    boolean hasHeadRot = false;
-                    float bodyRot = 0;
-                    boolean hasBodyRot = false;
-                    double x = 0;
-                    boolean hasX = false;
-                    double y = 0;
-                    boolean hasY = false;
-                    double z = 0;
-                    boolean hasZ = false;
+                    Map<String, JsonElement> map = players.asMap();
 
-                    if (properties.has("uuid")) {
-                        uuid = gson.fromJson(properties.get("uuid").getAsString(), UUID.class);
-                    }
+                    for (Map.Entry<String, JsonElement> entry : map.entrySet()) {
+                        String nameContent = entry.getKey();
+                        JsonObject properties = (JsonObject) entry.getValue();
+                        UUID uuid = UUID.randomUUID();
+                        CraftWorld world = null;
+                        float xRot = 0;
+                        boolean hasXRot = false;
+                        float yRot = 0;
+                        boolean hasYRot = false;
+                        float headRot = 0;
+                        boolean hasHeadRot = false;
+                        float bodyRot = 0;
+                        boolean hasBodyRot = false;
+                        double x = 0;
+                        boolean hasX = false;
+                        double y = 0;
+                        boolean hasY = false;
+                        double z = 0;
+                        boolean hasZ = false;
 
-                    if (properties.has("world")) {
-                        CraftWorld world1 = worlds.get(properties.get("world").getAsString());
-
-                        if (world1 != null) {
-                            world = world1;
-                        }
-                    }
-
-                    if (properties.has("location")) {
-                        JsonObject location = (JsonObject) properties.get("location");
-
-                        if (location.has("x")) {
-                            x = location.get("x").getAsDouble();
-                            hasX = true;
+                        if (properties.has("uuid")) {
+                            uuid = gson.fromJson(properties.get("uuid").getAsString(), UUID.class);
                         }
 
-                        if (location.has("y")) {
-                            y = location.get("y").getAsDouble();
-                            hasY = true;
+                        if (properties.has("world")) {
+                            CraftWorld world1 = worlds.get(properties.get("world").getAsString());
+
+                            if (world1 != null) {
+                                world = world1;
+                            }
                         }
 
-                        if (location.has("z")) {
-                            z = location.get("z").getAsDouble();
-                            hasZ = true;
-                        }
-                    }
+                        if (properties.has("location")) {
+                            JsonObject location = (JsonObject) properties.get("location");
 
-                    if (properties.has("rotation")) {
-                        JsonObject rotation = (JsonObject) properties.get("rotation");
+                            if (location.has("x")) {
+                                x = location.get("x").getAsDouble();
+                                hasX = true;
+                            }
 
-                        if (rotation.has("rotX")) {
-                            xRot = rotation.get("rotX").getAsFloat();
-                            hasXRot = true;
-                        }
+                            if (location.has("y")) {
+                                y = location.get("y").getAsDouble();
+                                hasY = true;
+                            }
 
-                        if (rotation.has("rotY")) {
-                            yRot = rotation.get("rotY").getAsFloat();
-                            hasYRot = true;
-                        }
-
-                        if (rotation.has("bodyRot")) {
-                            bodyRot = rotation.get("bodyRot").getAsFloat();
-                            hasBodyRot = true;
+                            if (location.has("z")) {
+                                z = location.get("z").getAsDouble();
+                                hasZ = true;
+                            }
                         }
 
-                        if (rotation.has("headRot")) {
-                            headRot = rotation.get("headRot").getAsFloat();
-                            hasHeadRot = true;
-                        }
-                    }
+                        if (properties.has("rotation")) {
+                            JsonObject rotation = (JsonObject) properties.get("rotation");
 
-                    if (world != null) {
-                        ServerLevel nmsWorld = world.getHandle();
-                        MyFakePlayer fk_player = new MyFakePlayer(MinecraftServer.getServer(), world.getHandle(), new GameProfile(uuid, nameContent));
-                        fk_player.setLevel(world.getHandle());
+                            if (rotation.has("rotX")) {
+                                xRot = rotation.get("rotX").getAsFloat();
+                                hasXRot = true;
+                            }
 
-                        if (hasXRot && hasYRot) {
-                            fk_player.setXRot(xRot);
-                            fk_player.setYRot(yRot);
-                        }
+                            if (rotation.has("rotY")) {
+                                yRot = rotation.get("rotY").getAsFloat();
+                                hasYRot = true;
+                            }
 
-                        if (hasX && hasY && hasZ) {
-                            fk_player.setPos(x, y, z);
-                        }
+                            if (rotation.has("bodyRot")) {
+                                bodyRot = rotation.get("bodyRot").getAsFloat();
+                                hasBodyRot = true;
+                            }
 
-                        if (hasBodyRot) {
-                            fk_player.setYBodyRot(bodyRot);
-                        }
-
-                        if (hasHeadRot) {
-                            fk_player.setYHeadRot(headRot);
+                            if (rotation.has("headRot")) {
+                                headRot = rotation.get("headRot").getAsFloat();
+                                hasHeadRot = true;
+                            }
                         }
 
-                        fk_player.setHealth(20);
-                        fk_player.isRealPlayer = false;
-                        Utils.setFakePlayerColorName(nameContent, fk_player);
-                        Utils.addSpecificPlayer(fk_player, world);
-                        //world.addEntityToWorld(fk_player, CreatureSpawnEvent.SpawnReason.CUSTOM);
-                        //fk_player.spawnIn(world.getHandle());
+                        if (world != null) {
+                            ServerLevel nmsWorld = world.getHandle();
+                            MyFakePlayer fk_player = new MyFakePlayer(MinecraftServer.getServer(), world.getHandle(), new GameProfile(uuid, nameContent));
+                            fk_player.setLevel(world.getHandle());
+
+                            if (hasXRot && hasYRot) {
+                                fk_player.setXRot(xRot);
+                                fk_player.setYRot(yRot);
+                            }
+
+                            if (hasX && hasY && hasZ) {
+                                fk_player.setPos(x, y, z);
+                            }
+
+                            if (hasBodyRot) {
+                                fk_player.setYBodyRot(bodyRot);
+                            }
+
+                            if (hasHeadRot) {
+                                fk_player.setYHeadRot(headRot);
+                            }
+
+                            fk_player.setHealth(20);
+                            fk_player.isRealPlayer = false;
+                            Utils.setFakePlayerColorName(nameContent, fk_player);
+                            Utils.addSpecificPlayer(fk_player, world);
+                            //world.addEntityToWorld(fk_player, CreatureSpawnEvent.SpawnReason.CUSTOM);
+                            //fk_player.spawnIn(world.getHandle());
                         /*Chunk craftChunk = world.getChunkAt(fk_player.getBlockX(), fk_player.getBlockZ());
                         craftChunk.setForceLoaded(true);
                         craftChunk.load();
@@ -163,29 +165,30 @@ public class ConfigManager {
                         levelChunk.setLoaded(true);
                         levelChunk.loadCallback();
                          */
-                        //fk_player.isRealPlayer = true;
-                        //nmsWorld.getChunkSource().chunkMap.addEntity(fk_player);
-                        //nmsWorld.playerChunkLoader.addPlayer(fk_player);
-                        //nmsWorld.playerChunkLoader.updatePlayer(fk_player);
-                        //nmsWorld.playerChunkLoader.tick();
-                        //fk_player.isRealPlayer = false;
-                        //FakePlayer.commandExecutor.addPlayerToServerList(fk_player);
-                        //FakePlayer.commandExecutor.updateScoreboard(world.getHandle(), fk_player);
-                        //FakePlayer.commandExecutor.dedicatedPlayerList.onPlayerJoinFinish(fk_player, world.getHandle(), "local");
-                        ServerStatus serverping = MinecraftServer.getServer().getStatus();
+                            //fk_player.isRealPlayer = true;
+                            //nmsWorld.getChunkSource().chunkMap.addEntity(fk_player);
+                            //nmsWorld.playerChunkLoader.addPlayer(fk_player);
+                            //nmsWorld.playerChunkLoader.updatePlayer(fk_player);
+                            //nmsWorld.playerChunkLoader.tick();
+                            //fk_player.isRealPlayer = false;
+                            //FakePlayer.commandExecutor.addPlayerToServerList(fk_player);
+                            //FakePlayer.commandExecutor.updateScoreboard(world.getHandle(), fk_player);
+                            //FakePlayer.commandExecutor.dedicatedPlayerList.onPlayerJoinFinish(fk_player, world.getHandle(), "local");
+                            ServerStatus serverping = MinecraftServer.getServer().getStatus();
 
-                        if (serverping != null) {
-                            fk_player.sendServerStatus(serverping);
-                        }
+                            if (serverping != null) {
+                                fk_player.sendServerStatus(serverping);
+                            }
 
-                        fk_player.isRealPlayer = false;
-                        Utils.fakePlayerList.add(fk_player);
-                        Utils.fakePlayerMap.put(fk_player, world);
+                            fk_player.isRealPlayer = false;
+                            Utils.fakePlayerList.add(fk_player);
+                            Utils.fakePlayerMap.put(fk_player, world);
 
-                        for (ServerPlayer player__ : MinecraftServer.getServer().getPlayerList().getPlayers()) {
-                            if (player__.isRealPlayer && !(player__ instanceof MyFakePlayer)) {
-                                //server.getPlayerList().placeNewPlayer(player__.connection.connection, npc);
-                                Utils.doSending(player__.connection, fk_player);
+                            for (ServerPlayer player__ : MinecraftServer.getServer().getPlayerList().getPlayers()) {
+                                if (player__.isRealPlayer && !(player__ instanceof MyFakePlayer)) {
+                                    //server.getPlayerList().placeNewPlayer(player__.connection.connection, npc);
+                                    Utils.doSending(player__.connection, fk_player);
+                                }
                             }
                         }
                     }
